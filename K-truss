@@ -1,0 +1,314 @@
+
+
+#include<set>
+#include<map>
+#include<string>
+#include<vector>
+#include<time.h>
+#include<cassert>
+#include<fstream>
+#include<iterator>
+#include<iostream>
+#include<algorithm>
+
+
+using namespace std;
+
+ typedef pair<string, int> PAIR ;
+ typedef pair<int ,string> PAIRTWO;
+ typedef pair<int,pair<int,int>>  EDGES ;
+
+ bool Sort_edges_vec(const EDGES& obj1 , const EDGES& obj2)
+ {
+	 return obj1.first < obj2.first ;
+ }
+
+ struct SortEdgesVec {
+	 bool operator()(const EDGES& obj1 , const EDGES& obj2){
+		 return obj1.first <obj2.first ;
+	 }
+ };
+
+ostream& operator<<(ostream& out, const PAIR& p) {  
+ 	return out << p.first << "\t" << p.second;  
+ }  
+
+ostream& operator<<(ostream& out , const pair<int , int>& p) {
+	 return out <<p.first << "-" <<p.second ;
+ }
+ 
+ostream& operator<<(ostream& out, const PAIRTWO& p) {  
+	return out << p.first << "\t" << p.second;  
+}
+
+
+class Graph {
+private:
+	map<int,set<int>>  neighbour;   //����ͼ�ߵ�����
+	map<int ,pair<int,int>> edges;  //��
+	vector<EDGES> edges_vec;
+	set<pair<int,int>> G;
+public:
+	int number ;
+	ofstream ofile ;
+	void OpenFile() ;
+	void ReadFile() ;
+	void AddEdge(int a , int b) ;
+	void KTruss( int k ) ;
+	void EdgesDegree() ;
+	Graph() {
+		neighbour.clear() ;
+		edges_vec.clear() ;
+		edges.clear() ;
+		G.clear() ;
+	}
+};
+
+void Graph::AddEdge(int a , int b) {
+	set<int> tmp ;
+	std::map<int , set<int>>::iterator iter ; 
+	iter = neighbour.find(a);
+	if (iter != neighbour.end()) {
+		iter->second.insert(b);
+	}
+	else {
+		tmp.clear() ;
+		tmp.insert(b) ;
+		neighbour.insert(make_pair(a , tmp));
+	}
+
+	iter = neighbour.find(b);
+	if (iter != neighbour.end()) {
+		iter->second.insert(a);
+	}
+	else {
+		tmp.clear() ;
+		tmp.insert(a) ;
+		neighbour.insert(make_pair(b , tmp));
+	}
+	G.insert(make_pair(a , b));
+}
+
+void Graph::OpenFile( ) {
+	ofile.open("result.txt");
+	if (!ofile) {
+		printf("open is fail!!!") ;
+		cout<<"unable to open result.txt"<<endl ;
+	}
+}
+
+void Graph::ReadFile( ) {
+	int a , b ;
+	ifstream fileStream("data.txt") ;
+	if(!fileStream)  {
+		printf("Open is fail!!!") ;
+	}
+	while (!fileStream.eof( )){
+		fileStream >> a >> b ;
+		if (a > b) {
+			int c = a;
+			a = b ;
+			b = c ;
+		}
+		AddEdge(a , b);
+	}
+	//assert(fileStream) ;
+	fileStream.close() ;
+}
+
+void Graph::EdgesDegree( ) {
+	edges.clear() ;
+	edges_vec.clear() ;
+	int a , b ;
+	ifstream fileStream("data.txt") ;
+	if (!fileStream)  {
+		printf("Open is fail!") ;
+	}
+	while (true)  {
+		int numberNeighbour ;
+		set<int> ANeighbour, BNeighbour , interNeighbour ;
+		fileStream >> a >> b ;
+		if (fileStream.eof( ))
+			break;
+		if (a > b)  {   //little  letter 
+			int c = a ;
+			a = b ;
+			b = c ;
+		}
+		std::map<int, set<int>>::iterator iterA , iterB ;
+		iterA = neighbour.find( a );
+		iterB = neighbour.find( b );
+		if (iterA == neighbour.end() || iterB == neighbour.end())  {
+			printf("cannot get a\b neighbour");
+		}
+		else   {
+			ANeighbour = iterA->second ;
+			BNeighbour = iterB->second ; 
+			set_intersection(ANeighbour.begin(),ANeighbour.end(),
+				BNeighbour.begin(),BNeighbour.end(), 
+				inserter(interNeighbour,interNeighbour.begin())) ;
+			numberNeighbour = interNeighbour.size() ;
+			edges.insert(make_pair( numberNeighbour , make_pair(a , b) )) ;  //map sorts by itself
+			edges_vec.push_back(make_pair(numberNeighbour,make_pair(a , b))) ;
+			sort(edges_vec.begin(), edges_vec.end(), Sort_edges_vec);
+			//sort edges_vec	
+		}
+	}
+}
+
+void Graph::KTruss( int k ) {
+
+	EdgesDegree()  ;
+	while (G.size() > 0)
+	{
+		//UpdataEdges();
+		while (edges_vec.size() != 0 && edges_vec.begin()->first < k-2)
+		{
+			for (std::vector<pair<int , pair<int, int>>>::iterator iter_edges_vec = edges_vec.begin() ;
+				iter_edges_vec != edges_vec.end() ;) {
+					pair<int , int> element ;
+					if ( iter_edges_vec->first < k-2) 
+					{
+						int a = iter_edges_vec->second.first;
+						int b = iter_edges_vec->second.second;
+						element = make_pair(iter_edges_vec->second.first , iter_edges_vec->second.second) ;
+						set<int> ANeighbour, BNeighbour , interNeighbour ; 				
+						std::map<int, set<int>>::iterator iterA , iterB ;				
+						iterA = neighbour.find( iter_edges_vec->second.first ); 				
+						iterB = neighbour.find( iter_edges_vec->second.second );				
+						if (iterA == neighbour.end() || iterB == neighbour.end()) { 					
+							printf("cannot get a\b neighbour");				
+						}	
+						
+						else  {					
+							pair<int , int> elementOne , elementTwo; 					
+							ANeighbour = iterA->second ; 					
+							BNeighbour = iterB->second ; 				
+							set_intersection(ANeighbour.begin(),ANeighbour.end(),BNeighbour.begin(), 						
+								BNeighbour.end(), inserter(interNeighbour,interNeighbour.begin())) ; 					
+							for (std::set<int>::iterator iterNeighbour = interNeighbour.begin() ;						
+								iterNeighbour != interNeighbour.end() ; 						
+								++iterNeighbour )  {							
+								int elementNeighbour = *iterNeighbour ; 							
+								if (iter_edges_vec->second.first > elementNeighbour){ 								
+									elementOne = make_pair(elementNeighbour , iter_edges_vec->second.first) ; 							
+								}							
+								else					
+									elementOne = make_pair(iter_edges_vec->second.first , elementNeighbour);
+						
+								if (iter_edges_vec->second.second > elementNeighbour){
+									elementTwo = make_pair(elementNeighbour , iter_edges_vec->second.second) ;
+								}
+								else
+									elementTwo = make_pair(iter_edges_vec->second.second , elementNeighbour) ;
+								int  number = 0 ;
+								for (std::vector<pair<int,pair<int,int>>>::iterator iter = edges_vec.begin() ; 
+									iter != edges_vec.end();
+									++iter){
+										if (iter->second == elementOne || iter->second == elementTwo) {
+											iter->first-- ;
+											++number ;
+										}
+								}
+							}
+						}
+						iter_edges_vec = edges_vec.erase( iter_edges_vec ) ;  //delete
+						std::set<pair<int , int>>::iterator iter_set = G.find(element);
+						if (iter_set == G.end()){
+							printf("cannot fine the element!");
+						}
+						iter_set = G.erase(iter_set);
+						std::map<int,set<int>>::iterator iter_set_neighbour = neighbour.find(a) ;
+						std::set<int>::iterator iter_set_lll =iter_set_neighbour->second.find(b) ;
+						iter_set_lll =iter_set_neighbour->second.erase(iter_set_lll);
+						iter_set_neighbour = neighbour.find(b) ;
+						iter_set_lll =iter_set_neighbour->second.find(a) ;
+						iter_set_lll =iter_set_neighbour->second.erase(iter_set_lll);
+					}	
+					else
+						++iter_edges_vec  ;
+			}
+			sort(edges_vec.begin() , edges_vec.end() , Sort_edges_vec);
+		}
+		if (G.size() != 0){
+			cout << "\n" << k << "-truss:" << endl ;
+			for (set<pair<int , int>>::iterator iter_set_G = G.begin();
+				iter_set_G != G.end();
+				++iter_set_G){
+					cout << *iter_set_G << " ";
+			}
+			cout<<endl;
+		}
+		k++;
+	}
+}
+
+typedef pair<int,pair<int,int>>  EDGES ;
+
+// bool Sort_edges_vec(const EDGES& obj1 , const EDGES& obj2)
+// {
+// 	 return obj1.first < obj2.first ;
+// }
+// 
+// struct SortEdgesVec {
+// 	bool operator()(const EDGES& obj1 , const EDGES& obj2){
+// 		return obj1.first <obj2.first ;
+// 	}
+// };
+// bool cmp_by_value(const PAIR& lhs, const PAIR& rhs) {
+// 	return lhs.second < rhs.second ;
+// }
+// 
+// struct CmpByValue{
+// 	bool operator()(const PAIR& lhs, const PAIR& rhs){
+// 		return lhs.second < rhs.second ;
+// 	}
+// };
+
+int main( ) {
+	int k = 3 ;
+	Graph graph;
+	graph.OpenFile() ;
+	graph.ReadFile() ;	
+	graph.KTruss( k ) ;
+
+
+
+//	map<string, int> name_score_map;
+// 	map<int , string> name_score_map;
+// 	name_score_map[90] = "LiMin";  
+// 	name_score_map[79] = "ZiLinMi";  
+// 	name_score_map[92] = "BoB";  
+// 	name_score_map.insert(make_pair(99,"Bing"));  
+// 	name_score_map.insert(make_pair(86,"Albert"));
+// 	name_score_map["LiMin"] = 90;  
+// 	name_score_map["ZiLinMi"] = 79;  
+// 	name_score_map["BoB"] = 92;  
+// 	name_score_map.insert(make_pair("Bing",99));  
+// 	name_score_map.insert(make_pair("Albert",86));  
+// 	//��map��Ԫ��ת�浽vector��   
+// 	vector<PAIR> name_score_vec(name_score_map.begin(), name_score_map.end());  
+// 	sort(name_score_vec.begin(), name_score_vec.end(), CmpByValue()); 
+// 	name_score_map.clear();
+// 	// sort(name_score_vec.begin(), name_score_vec.end(), cmp_by_value);  
+// 	for (int i = 0; i != name_score_vec.size(); ++i) {  
+// 		cout << name_score_vec[i] << endl;  
+// 		name_score_map.insert(name_score_vec[i]);
+// 	} 
+	
+// 	for (map<string, int>::iterator iter = name_score_map.begin();  
+// 		iter != name_score_map.end();  
+// 		++iter) {  
+// 			cout << *iter << endl;  
+// 	} 
+
+// 	for (map<int, string>::iterator iter = name_score_map.begin();  
+// 		iter != name_score_map.end();  
+// 		++iter) {  
+// 			cout << *iter << endl;  
+// 	} 
+	
+	system("PAUSE") ;
+
+	return 0;
+}
